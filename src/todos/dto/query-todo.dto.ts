@@ -3,17 +3,25 @@ import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class QueryTodoDto {
-  @ApiPropertyOptional({ description: 'Search query to search in title and description' })
+  @ApiPropertyOptional({
+    description: 'Search query to search in title and description',
+  })
   @IsString()
   @IsOptional()
   search?: string;
 
-  @ApiPropertyOptional({ description: 'Filter by todo status', enum: ['all', 'pending', 'completed'] })
+  @ApiPropertyOptional({
+    description: 'Filter by todo status',
+    enum: ['all', 'pending', 'completed'],
+  })
   @IsIn(['all', 'pending', 'completed'])
   @IsOptional()
   status?: 'all' | 'pending' | 'completed' = 'all';
 
-  @ApiPropertyOptional({ description: 'Sort by field', enum: ['createdAt', 'updatedAt', 'title'] })
+  @ApiPropertyOptional({
+    description: 'Sort by field',
+    enum: ['createdAt', 'updatedAt', 'title'],
+  })
   @IsIn(['createdAt', 'updatedAt', 'title'])
   @IsOptional()
   sortBy?: 'createdAt' | 'updatedAt' | 'title' = 'createdAt';
