@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CreateTodoDto } from './dto/create-todo.dto';
 import { QueryTodoDto } from './dto/query-todo.dto';
@@ -12,14 +21,22 @@ export class TodosController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new todo' })
-  @ApiResponse({ status: 201, description: 'The todo has been successfully created.' })
+  @ApiResponse({
+    status: 201,
+    description: 'The todo has been successfully created.',
+  })
   create(@Body() createTodoDto: CreateTodoDto) {
     return this.todosService.create(createTodoDto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all todos with filter, search, sort, and pagination' })
-  @ApiResponse({ status: 200, description: 'List of todos returned successfully.' })
+  @ApiOperation({
+    summary: 'Get all todos with filter, search, sort, and pagination',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of todos returned successfully.',
+  })
   findAll(@Query() query: QueryTodoDto) {
     return this.todosService.findAll(query);
   }
@@ -40,7 +57,9 @@ export class TodosController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update a todo by ID (or toggle completion status)' })
+  @ApiOperation({
+    summary: 'Update a todo by ID (or toggle completion status)',
+  })
   @ApiResponse({ status: 200, description: 'Todo updated successfully.' })
   @ApiResponse({ status: 404, description: 'Todo not found.' })
   update(@Param('id') id: string, @Body() updateTodoDto: UpdateTodoDto) {

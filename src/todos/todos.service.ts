@@ -24,7 +24,14 @@ export class TodosService {
   }
 
   async findAll(query: QueryTodoDto) {
-    const { search, status, sortBy = 'createdAt', order = 'desc', page = 1, limit = 10 } = query;
+    const {
+      search,
+      status,
+      sortBy = 'createdAt',
+      order = 'desc',
+      page = 1,
+      limit = 10,
+    } = query;
 
     const where: Prisma.TodoWhereInput = {};
 

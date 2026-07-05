@@ -8,7 +8,10 @@ export class UpdateTodoDto {
   @MaxLength(200)
   title?: string;
 
-  @ApiPropertyOptional({ description: 'The detailed description of the todo', maxLength: 2000 })
+  @ApiPropertyOptional({
+    description: 'The detailed description of the todo',
+    maxLength: 2000,
+  })
   @IsString()
   @IsOptional()
   @MaxLength(2000)
