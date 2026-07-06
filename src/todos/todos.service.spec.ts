@@ -91,6 +91,67 @@ describe('TodosService', () => {
     });
   });
 
+  describe('findAll', () => {
+    it('should return paginated todos with default filters', async () => {
+      const items = [{ id: '1', title: 'Task 1', guestId: 'guest-1' }];
+      mockPrismaService.todo.findMany.mockResolvedValue(items);
+      mockPrismaService.todo.count.mockResolvedValue(1);
+
+      const result = await service.findAll({}, 'guest-1');
+
+      expect(prisma.todo.findMany).toHaveBeenCalledWith({
+        where: { guestId: 'guest-1' },
+        orderBy: { createdAt: 'desc' },
+        skip: 0,
+        take: 10,
+      });
+      expect(result).toEqual({
+        success: true,
+        data: {
+          items,
+          totalItems: 1,
+          totalPages: 1,
+          currentPage: 1,
+          limit: 10,
+        },
+      });
+    });
+
+    it('should apply search, status, listId, isImportant, and isMyDay filters', async () => {
+      mockPrismaService.todo.findMany.mockResolvedValue([]);
+      mockPrismaService.todo.count.mockResolvedValue(0);
+
+      await service.findAll({
+        search: '  search-word  ',
+        status: 'completed',
+        listId: 'list-123',
+        isImportant: true,
+        isMyDay: false,
+        sortBy: 'title',
+        order: 'asc',
+        page: 2,
+        limit: 5,
+      }, 'guest-1');
+
+      expect(prisma.todo.findMany).toHaveBeenCalledWith({
+        where: {
+          guestId: 'guest-1',
+          OR: [
+            { title: { contains: 'search-word', mode: 'insensitive' } },
+            { description: { contains: 'search-word', mode: 'insensitive' } },
+          ],
+          completed: true,
+          listId: 'list-123',
+          isImportant: true,
+          isMyDay: false,
+        },
+        orderBy: { title: 'asc' },
+        skip: 5,
+        take: 5,
+      });
+    });
+  });
+
   describe('findOne', () => {
     it('should return a todo if found', async () => {
       const todo = {
