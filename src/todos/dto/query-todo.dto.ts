@@ -1,5 +1,5 @@
-import { IsOptional, IsString, IsIn, IsInt, Min, Max } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsOptional, IsString, IsIn, IsInt, Min, Max, IsBoolean } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
 
 export class QueryTodoDto {
   @IsOptional()
@@ -36,10 +36,12 @@ export class QueryTodoDto {
   listId?: string;
 
   @IsOptional()
-  @IsString()
-  isImportant?: string; // 'true' or 'false'
+  @Transform(({ value }) => value === undefined ? undefined : (value === 'true' || value === true))
+  @IsBoolean()
+  isImportant?: boolean;
 
   @IsOptional()
-  @IsString()
-  isMyDay?: string; // 'true' or 'false'
+  @Transform(({ value }) => value === undefined ? undefined : (value === 'true' || value === true))
+  @IsBoolean()
+  isMyDay?: boolean;
 }

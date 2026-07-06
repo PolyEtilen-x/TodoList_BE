@@ -63,6 +63,8 @@ export class TodosService {
 
     const where: Prisma.TodoWhereInput = { guestId };
 
+
+
     if (search && search.trim() !== '') {
       const searchPattern = search.trim();
       where.OR = [
@@ -78,8 +80,8 @@ export class TodosService {
     }
 
     if (listId) where.listId = listId;
-    if (isImportant === 'true') where.isImportant = true;
-    if (isMyDay === 'true') where.isMyDay = true;
+    if (isImportant !== undefined) where.isImportant = isImportant;
+    if (isMyDay !== undefined) where.isMyDay = isMyDay;
 
     // Convert page/limit logic correctly
     const pageNum = Number(page) || 1;
@@ -196,8 +198,8 @@ export class TodosService {
     const baseWhere: Prisma.TodoWhereInput = { guestId };
 
     if (listId) baseWhere.listId = listId;
-    if (isImportant === 'true') baseWhere.isImportant = true;
-    if (isMyDay === 'true') baseWhere.isMyDay = true;
+    if (isImportant !== undefined) baseWhere.isImportant = isImportant;
+    if (isMyDay !== undefined) baseWhere.isMyDay = isMyDay;
 
     const [total, pending, completed] = await Promise.all([
       this.prisma.todo.count({ where: baseWhere }),
