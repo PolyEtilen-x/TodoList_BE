@@ -78,7 +78,26 @@ export class TodoListsService implements OnModuleInit {
         { createdAt: 'asc' },
       ],
     });
-    return { success: true, data: lists };
+
+    // Tính toán lại chính xác số lượng công việc quan trọng cho danh sách hệ thống "Important"
+    const mappedLists = await Promise.all(
+      lists.map(async (list) => {
+        if (list.isSystem && list.name === 'Important') {
+          const importantCount = await this.prisma.todo.count({
+            where: { guestId, isImportant: true },
+          });
+          return {
+            ...list,
+            _count: {
+              todos: importantCount,
+            },
+          };
+        }
+        return list;
+      })
+    );
+
+    return { success: true, data: mappedLists };
   }
 
   async findOne(id: string, guestId: string) {

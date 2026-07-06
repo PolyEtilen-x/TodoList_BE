@@ -22,6 +22,15 @@ export class TodoGroupsService {
       include: {
         lists: {
           where: { guestId },
+          include: {
+            _count: {
+              select: {
+                todos: {
+                  where: { guestId },
+                },
+              },
+            },
+          },
         },
       },
       orderBy: { createdAt: 'asc' },
@@ -35,6 +44,15 @@ export class TodoGroupsService {
       include: {
         lists: {
           where: { guestId },
+          include: {
+            _count: {
+              select: {
+                todos: {
+                  where: { guestId },
+                },
+              },
+            },
+          },
         },
       },
     });
