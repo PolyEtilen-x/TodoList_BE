@@ -6,12 +6,12 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Enable CORS for frontend to connect
+  const allowedOrigins = (process.env.CORS_ORIGIN || '')
+    .split(',')
+    .map(o => o.trim())
+    .filter(Boolean);
   app.enableCors({
-    origin: [
-      'https://pe-todo-list.vercel.app',
-      process.env.CORS_ORIGIN || '',
-    ].filter(Boolean),
+    origin: allowedOrigins.length ? allowedOrigins : true,
     credentials: true,
   });
 
