@@ -45,8 +45,8 @@ export class TodosController {
   @Get('stats')
   @ApiOperation({ summary: 'Get total, pending, and completed todo counts' })
   @ApiResponse({ status: 200, description: 'Stats retrieved successfully.' })
-  getStats(@GuestId() guestId: string) {
-    return this.todosService.getStats(guestId);
+  getStats(@Query() query: QueryTodoDto, @GuestId() guestId: string) {
+    return this.todosService.getStats(query, guestId);
   }
 
   @Get(':id')

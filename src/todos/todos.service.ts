@@ -138,11 +138,18 @@ export class TodosService {
     return { success: true, message: `Todo deleted successfully.` };
   }
 
-  async getStats(guestId: string) {
+  async getStats(query: QueryTodoDto, guestId: string) {
+    const { listId, isImportant, isMyDay } = query;
+    const baseWhere: Prisma.TodoWhereInput = { guestId };
+
+    if (listId) baseWhere.listId = listId;
+    if (isImportant === 'true') baseWhere.isImportant = true;
+    if (isMyDay === 'true') baseWhere.isMyDay = true;
+
     const [total, pending, completed] = await Promise.all([
-      this.prisma.todo.count({ where: { guestId } }),
-      this.prisma.todo.count({ where: { guestId, completed: false } }),
-      this.prisma.todo.count({ where: { guestId, completed: true } }),
+      this.prisma.todo.count({ where: baseWhere }),
+      this.prisma.todo.count({ where: { ...baseWhere, completed: false } }),
+      this.prisma.todo.count({ where: { ...baseWhere, completed: true } }),
     ]);
 
     return { success: true, data: { total, pending, completed } };
