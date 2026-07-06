@@ -8,7 +8,10 @@ async function bootstrap() {
 
   // Enable CORS for frontend to connect
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || '*',
+    origin: [
+      'https://pe-todo-list.vercel.app',
+      process.env.CORS_ORIGIN || '',
+    ].filter(Boolean),
     credentials: true,
   });
 
