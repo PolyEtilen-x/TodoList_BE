@@ -26,7 +26,7 @@ export class TodoGroupsService {
             _count: {
               select: {
                 todos: {
-                  where: { guestId },
+                  where: { guestId, completed: false },
                 },
               },
             },
@@ -48,7 +48,7 @@ export class TodoGroupsService {
             _count: {
               select: {
                 todos: {
-                  where: { guestId },
+                  where: { guestId, completed: false },
                 },
               },
             },
