@@ -1,4 +1,5 @@
-import { IsOptional, IsString, IsIn } from 'class-validator';
+import { IsOptional, IsString, IsIn, IsInt, Min, Max } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class QueryTodoDto {
   @IsOptional()
@@ -10,17 +11,24 @@ export class QueryTodoDto {
   status?: 'all' | 'completed' | 'pending';
 
   @IsOptional()
-  @IsString()
-  sortBy?: string;
+  @IsIn(['createdAt', 'updatedAt', 'title'])
+  sortBy?: 'createdAt' | 'updatedAt' | 'title';
 
   @IsOptional()
   @IsIn(['asc', 'desc'])
   order?: 'asc' | 'desc';
 
   @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
   page?: number;
 
   @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
   limit?: number;
 
   @IsOptional()

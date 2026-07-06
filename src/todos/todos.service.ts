@@ -1,20 +1,34 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTodoDto } from './dto/create-todo.dto';
 import { UpdateTodoDto } from './dto/update-todo.dto';
 import { QueryTodoDto } from './dto/query-todo.dto';
-import { Prisma } from '@prisma/client';
+import { Prisma, Todo } from '@prisma/client';
 
 @Injectable()
 export class TodosService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(createDto: CreateTodoDto, guestId: string) {
     if (createDto.listId) {
-      const list = await this.prisma.todoList.findUnique({ where: { id: createDto.listId } });
+      const list = await this.prisma.todoList.findUnique({
+        where: { id: createDto.listId },
+      });
       if (!list) throw new BadRequestException('Invalid listId');
       if (!list.isSystem && list.guestId !== guestId) {
         throw new BadRequestException('Invalid listId');
+      }
+    }
+
+    if (createDto.startTime && createDto.endTime) {
+      const start = new Date(createDto.startTime);
+      const end = new Date(createDto.endTime);
+      if (end < start) {
+        throw new BadRequestException('endTime must be after startTime');
       }
     }
 
@@ -25,6 +39,8 @@ export class TodosService {
         isImportant: createDto.isImportant || false,
         isMyDay: createDto.isMyDay || false,
         listId: createDto.listId || null,
+        startTime: createDto.startTime ? new Date(createDto.startTime) : null,
+        endTime: createDto.endTime ? new Date(createDto.endTime) : null,
         guestId,
       },
     });
@@ -42,7 +58,7 @@ export class TodosService {
       limit = 10,
       listId,
       isImportant,
-      isMyDay
+      isMyDay,
     } = query;
 
     const where: Prisma.TodoWhereInput = { guestId };
@@ -94,7 +110,10 @@ export class TodosService {
     };
   }
 
-  async findOne(id: string, guestId: string) {
+  async findOne(
+    id: string,
+    guestId: string,
+  ): Promise<{ success: boolean; data: Todo }> {
     const todo = await this.prisma.todo.findUnique({
       where: { id },
     });
@@ -106,23 +125,57 @@ export class TodosService {
   }
 
   async update(id: string, updateDto: UpdateTodoDto, guestId: string) {
-    await this.findOne(id, guestId); // verify ownership and existence
+    const todoResult = await this.findOne(id, guestId); // verify ownership and existence
+    const existingTodo = todoResult.data;
 
     if (updateDto.listId) {
-      const list = await this.prisma.todoList.findUnique({ where: { id: updateDto.listId } });
+      const list = await this.prisma.todoList.findUnique({
+        where: { id: updateDto.listId },
+      });
       if (!list) throw new BadRequestException('Invalid listId');
       if (!list.isSystem && list.guestId !== guestId) {
         throw new BadRequestException('Invalid listId');
       }
     }
 
+    const start =
+      updateDto.startTime !== undefined
+        ? updateDto.startTime
+          ? new Date(updateDto.startTime)
+          : null
+        : existingTodo.startTime;
+
+    const end =
+      updateDto.endTime !== undefined
+        ? updateDto.endTime
+          ? new Date(updateDto.endTime)
+          : null
+        : existingTodo.endTime;
+
+    if (start && end && end < start) {
+      throw new BadRequestException('endTime must be after startTime');
+    }
+
     const updateData: Prisma.TodoUncheckedUpdateInput = {};
-    if (updateDto.title !== undefined) updateData.title = updateDto.title.trim();
-    if (updateDto.description !== undefined) updateData.description = updateDto.description?.trim() || null;
-    if (updateDto.completed !== undefined) updateData.completed = updateDto.completed;
-    if (updateDto.isImportant !== undefined) updateData.isImportant = updateDto.isImportant;
+    if (updateDto.title !== undefined)
+      updateData.title = updateDto.title.trim();
+    if (updateDto.description !== undefined)
+      updateData.description = updateDto.description?.trim() || null;
+    if (updateDto.completed !== undefined)
+      updateData.completed = updateDto.completed;
+    if (updateDto.isImportant !== undefined)
+      updateData.isImportant = updateDto.isImportant;
     if (updateDto.isMyDay !== undefined) updateData.isMyDay = updateDto.isMyDay;
-    if (updateDto.listId !== undefined) updateData.listId = updateDto.listId || null;
+    if (updateDto.listId !== undefined)
+      updateData.listId = updateDto.listId || null;
+    if (updateDto.startTime !== undefined)
+      updateData.startTime = updateDto.startTime
+        ? new Date(updateDto.startTime)
+        : null;
+    if (updateDto.endTime !== undefined)
+      updateData.endTime = updateDto.endTime
+        ? new Date(updateDto.endTime)
+        : null;
 
     const todo = await this.prisma.todo.update({
       where: { id },

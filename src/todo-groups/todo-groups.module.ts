@@ -4,6 +4,6 @@ import { TodoGroupsService } from './todo-groups.service';
 
 @Module({
   controllers: [TodoGroupsController],
-  providers: [TodoGroupsService]
+  providers: [TodoGroupsService],
 })
 export class TodoGroupsModule {}

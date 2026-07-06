@@ -1,11 +1,16 @@
-import { Injectable, NotFoundException, BadRequestException, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  OnModuleInit,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTodoListDto, UpdateTodoListDto } from './dto/todo-list.dto';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class TodoListsService implements OnModuleInit {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async onModuleInit() {
     // Clean up old default system lists if they exist
@@ -16,9 +21,7 @@ export class TodoListsService implements OnModuleInit {
       },
     });
 
-    const defaultLists = [
-      { name: 'Important', icon: 'Star', isSystem: true },
-    ];
+    const defaultLists = [{ name: 'Important', icon: 'Star', isSystem: true }];
 
     for (const list of defaultLists) {
       const exists = await this.prisma.todoList.findFirst({
@@ -38,7 +41,9 @@ export class TodoListsService implements OnModuleInit {
 
   async create(createDto: CreateTodoListDto, guestId: string) {
     if (createDto.groupId) {
-      const group = await this.prisma.todoGroup.findUnique({ where: { id: createDto.groupId } });
+      const group = await this.prisma.todoGroup.findUnique({
+        where: { id: createDto.groupId },
+      });
       if (!group || (group.guestId && group.guestId !== guestId)) {
         throw new BadRequestException('Invalid groupId');
       }
@@ -59,10 +64,7 @@ export class TodoListsService implements OnModuleInit {
   async findAll(guestId: string) {
     const lists = await this.prisma.todoList.findMany({
       where: {
-        OR: [
-          { isSystem: true },
-          { guestId },
-        ],
+        OR: [{ isSystem: true }, { guestId }],
       },
       include: {
         _count: {
@@ -73,10 +75,7 @@ export class TodoListsService implements OnModuleInit {
           },
         },
       },
-      orderBy: [
-        { isSystem: 'desc' },
-        { createdAt: 'asc' },
-      ],
+      orderBy: [{ isSystem: 'desc' }, { createdAt: 'asc' }],
     });
 
     // Tính toán lại chính xác số lượng công việc quan trọng chưa hoàn thành cho danh sách hệ thống "Important"
@@ -94,7 +93,7 @@ export class TodoListsService implements OnModuleInit {
           };
         }
         return list;
-      })
+      }),
     );
 
     return { success: true, data: mappedLists };
@@ -111,7 +110,8 @@ export class TodoListsService implements OnModuleInit {
       },
     });
 
-    if (!list) throw new NotFoundException(`TodoList with ID "${id}" not found`);
+    if (!list)
+      throw new NotFoundException(`TodoList with ID "${id}" not found`);
     if (!list.isSystem && list.guestId !== guestId) {
       throw new NotFoundException(`TodoList with ID "${id}" not found`);
     }
@@ -127,7 +127,9 @@ export class TodoListsService implements OnModuleInit {
     }
 
     if (updateDto.groupId) {
-      const group = await this.prisma.todoGroup.findUnique({ where: { id: updateDto.groupId } });
+      const group = await this.prisma.todoGroup.findUnique({
+        where: { id: updateDto.groupId },
+      });
       if (!group || (group.guestId && group.guestId !== guestId)) {
         throw new BadRequestException('Invalid groupId');
       }
@@ -135,8 +137,10 @@ export class TodoListsService implements OnModuleInit {
 
     const updateData: Prisma.TodoListUncheckedUpdateInput = {};
     if (updateDto.name !== undefined) updateData.name = updateDto.name.trim();
-    if (updateDto.icon !== undefined) updateData.icon = updateDto.icon?.trim() || null;
-    if (updateDto.groupId !== undefined) updateData.groupId = updateDto.groupId || null;
+    if (updateDto.icon !== undefined)
+      updateData.icon = updateDto.icon?.trim() || null;
+    if (updateDto.groupId !== undefined)
+      updateData.groupId = updateDto.groupId || null;
 
     const updatedList = await this.prisma.todoList.update({
       where: { id },

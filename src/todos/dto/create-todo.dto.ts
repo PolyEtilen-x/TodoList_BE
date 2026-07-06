@@ -1,4 +1,11 @@
-import { IsNotEmpty, IsOptional, IsString, MaxLength, IsBoolean } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+  IsBoolean,
+  IsDateString,
+} from 'class-validator';
 
 export class CreateTodoDto {
   @IsNotEmpty()
@@ -22,4 +29,12 @@ export class CreateTodoDto {
   @IsOptional()
   @IsString()
   listId?: string;
+
+  @IsOptional()
+  @IsDateString()
+  startTime?: string;
+
+  @IsOptional()
+  @IsDateString()
+  endTime?: string;
 }

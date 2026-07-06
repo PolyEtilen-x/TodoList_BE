@@ -2,7 +2,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TodosService } from './todos.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 
 describe('TodosService', () => {
   let service: TodosService;
@@ -50,19 +50,44 @@ describe('TodosService', () => {
       };
       const createdTodo = {
         id: 'uuid-1',
-        ...createTodoDto,
+        title: 'Test Todo',
+        description: 'Test Description',
         completed: false,
+        guestId: 'guest-1',
+        listId: null,
+        isImportant: false,
+        isMyDay: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
       mockPrismaService.todo.create.mockResolvedValue(createdTodo);
 
-      const result = await service.create(createTodoDto);
+      const result = await service.create(createTodoDto, 'guest-1');
 
       expect(prisma.todo.create).toHaveBeenCalledWith({
-        data: { title: 'Test Todo', description: 'Test Description' },
+        data: {
+          title: 'Test Todo',
+          description: 'Test Description',
+          guestId: 'guest-1',
+          listId: null,
+          isImportant: false,
+          isMyDay: false,
+          startTime: null,
+          endTime: null,
+        },
       });
       expect(result).toEqual({ success: true, data: createdTodo });
+    });
+
+    it('should throw BadRequestException if endTime is before startTime', async () => {
+      const createTodoDto = {
+        title: 'Test Todo',
+        startTime: '2026-07-06T12:00:00.000Z',
+        endTime: '2026-07-06T10:00:00.000Z',
+      };
+      await expect(service.create(createTodoDto, 'guest-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -73,12 +98,13 @@ describe('TodosService', () => {
         title: 'Test Todo',
         description: 'Test',
         completed: false,
+        guestId: 'guest-1',
         createdAt: new Date(),
         updatedAt: new Date(),
       };
       mockPrismaService.todo.findUnique.mockResolvedValue(todo);
 
-      const result = await service.findOne('uuid-1');
+      const result = await service.findOne('uuid-1', 'guest-1');
 
       expect(prisma.todo.findUnique).toHaveBeenCalledWith({
         where: { id: 'uuid-1' },
@@ -89,7 +115,21 @@ describe('TodosService', () => {
     it('should throw NotFoundException if todo not found', async () => {
       mockPrismaService.todo.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('invalid-uuid')).rejects.toThrow(
+      await expect(service.findOne('invalid-uuid', 'guest-1')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw NotFoundException if guest tries to view other guest todo', async () => {
+      const todo = {
+        id: 'uuid-1',
+        title: 'Test Todo',
+        completed: false,
+        guestId: 'guest-other',
+      };
+      mockPrismaService.todo.findUnique.mockResolvedValue(todo);
+
+      await expect(service.findOne('uuid-1', 'guest-1')).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -102,6 +142,7 @@ describe('TodosService', () => {
         title: 'Test Todo',
         description: 'Test',
         completed: false,
+        guestId: 'guest-1',
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -112,7 +153,7 @@ describe('TodosService', () => {
       mockPrismaService.todo.findUnique.mockResolvedValue(todo);
       mockPrismaService.todo.update.mockResolvedValue(updatedTodo);
 
-      const result = await service.update('uuid-1', updateTodoDto);
+      const result = await service.update('uuid-1', updateTodoDto, 'guest-1');
 
       expect(prisma.todo.update).toHaveBeenCalledWith({
         where: { id: 'uuid-1' },
@@ -125,7 +166,7 @@ describe('TodosService', () => {
       mockPrismaService.todo.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.update('invalid-uuid', { completed: true }),
+        service.update('invalid-uuid', { completed: true }, 'guest-1'),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -137,27 +178,28 @@ describe('TodosService', () => {
         title: 'Test Todo',
         description: 'Test',
         completed: false,
+        guestId: 'guest-1',
         createdAt: new Date(),
         updatedAt: new Date(),
       };
       mockPrismaService.todo.findUnique.mockResolvedValue(todo);
       mockPrismaService.todo.delete.mockResolvedValue(todo);
 
-      const result = await service.remove('uuid-1');
+      const result = await service.remove('uuid-1', 'guest-1');
 
       expect(prisma.todo.delete).toHaveBeenCalledWith({
         where: { id: 'uuid-1' },
       });
       expect(result).toEqual({
         success: true,
-        message: 'Todo with ID "uuid-1" has been deleted successfully.',
+        message: 'Todo deleted successfully.',
       });
     });
 
     it('should throw NotFoundException when deleting a non-existent todo', async () => {
       mockPrismaService.todo.findUnique.mockResolvedValue(null);
 
-      await expect(service.remove('invalid-uuid')).rejects.toThrow(
+      await expect(service.remove('invalid-uuid', 'guest-1')).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -167,14 +209,14 @@ describe('TodosService', () => {
     it('should return correct counts', async () => {
       mockPrismaService.todo.count.mockImplementation(
         (args?: { where?: { completed?: boolean } }) => {
-          if (!args || !args.where) return Promise.resolve(10);
-          if (args.where.completed === false) return Promise.resolve(6);
-          if (args.where.completed === true) return Promise.resolve(4);
-          return Promise.resolve(0);
+          const completed = args?.where?.completed;
+          if (completed === false) return Promise.resolve(6);
+          if (completed === true) return Promise.resolve(4);
+          return Promise.resolve(10);
         },
       );
 
-      const result = await service.getStats();
+      const result = await service.getStats({}, 'guest-1');
 
       expect(result).toEqual({
         success: true,

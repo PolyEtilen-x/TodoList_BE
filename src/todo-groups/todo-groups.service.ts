@@ -4,7 +4,7 @@ import { CreateTodoGroupDto } from './dto/create-todo-group.dto';
 
 @Injectable()
 export class TodoGroupsService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(createDto: CreateTodoGroupDto, guestId: string) {
     const group = await this.prisma.todoGroup.create({
