@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTodoDto } from './dto/create-todo.dto';
 import { UpdateTodoDto } from './dto/update-todo.dto';
@@ -9,18 +9,23 @@ import { Prisma } from '@prisma/client';
 export class TodosService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(createTodoDto: CreateTodoDto) {
+  async create(createDto: CreateTodoDto) {
+    if (createDto.listId) {
+      const list = await this.prisma.todoList.findUnique({ where: { id: createDto.listId } });
+      if (!list) throw new BadRequestException('Invalid listId');
+    }
+
     const todo = await this.prisma.todo.create({
       data: {
-        title: createTodoDto.title.trim(),
-        description: createTodoDto.description?.trim(),
+        title: createDto.title.trim(),
+        description: createDto.description?.trim(),
+        isImportant: createDto.isImportant || false,
+        isMyDay: createDto.isMyDay || false,
+        listId: createDto.listId || null,
       },
     });
 
-    return {
-      success: true,
-      data: todo,
-    };
+    return { success: true, data: todo };
   }
 
   async findAll(query: QueryTodoDto) {
@@ -31,6 +36,9 @@ export class TodosService {
       order = 'desc',
       page = 1,
       limit = 10,
+      listId,
+      isImportant,
+      isMyDay
     } = query;
 
     const where: Prisma.TodoWhereInput = {};
@@ -49,21 +57,26 @@ export class TodosService {
       where.completed = false;
     }
 
-    const skip = (page - 1) * limit;
+    if (listId) where.listId = listId;
+    if (isImportant === 'true') where.isImportant = true;
+    if (isMyDay === 'true') where.isMyDay = true;
+
+    // Convert page/limit logic correctly
+    const pageNum = Number(page) || 1;
+    const limitNum = Number(limit) || 10;
+    const skip = (pageNum - 1) * limitNum;
 
     const [items, totalItems] = await Promise.all([
       this.prisma.todo.findMany({
         where,
-        orderBy: {
-          [sortBy]: order,
-        },
+        orderBy: { [sortBy]: order },
         skip,
-        take: limit,
+        take: limitNum,
       }),
       this.prisma.todo.count({ where }),
     ]);
 
-    const totalPages = Math.ceil(totalItems / limit);
+    const totalPages = Math.ceil(totalItems / limitNum);
 
     return {
       success: true,
@@ -71,8 +84,8 @@ export class TodosService {
         items,
         totalItems,
         totalPages,
-        currentPage: page,
-        limit,
+        currentPage: pageNum,
+        limit: limitNum,
       },
     };
   }
@@ -82,54 +95,38 @@ export class TodosService {
       where: { id },
     });
 
-    if (!todo) {
-      throw new NotFoundException(`Todo with ID "${id}" not found`);
-    }
-
-    return {
-      success: true,
-      data: todo,
-    };
+    if (!todo) throw new NotFoundException(`Todo with ID "${id}" not found`);
+    return { success: true, data: todo };
   }
 
-  async update(id: string, updateTodoDto: UpdateTodoDto) {
-    // Verify that todo exists
-    await this.findOne(id);
+  async update(id: string, updateDto: UpdateTodoDto) {
+    await this.findOne(id); // verify
 
-    const updateData: Prisma.TodoUpdateInput = {};
-    if (updateTodoDto.title !== undefined) {
-      updateData.title = updateTodoDto.title.trim();
+    if (updateDto.listId) {
+      const list = await this.prisma.todoList.findUnique({ where: { id: updateDto.listId } });
+      if (!list) throw new BadRequestException('Invalid listId');
     }
-    if (updateTodoDto.description !== undefined) {
-      updateData.description = updateTodoDto.description?.trim();
-    }
-    if (updateTodoDto.completed !== undefined) {
-      updateData.completed = updateTodoDto.completed;
-    }
+
+    const updateData: Prisma.TodoUncheckedUpdateInput = {};
+    if (updateDto.title !== undefined) updateData.title = updateDto.title.trim();
+    if (updateDto.description !== undefined) updateData.description = updateDto.description?.trim();
+    if (updateDto.completed !== undefined) updateData.completed = updateDto.completed;
+    if (updateDto.isImportant !== undefined) updateData.isImportant = updateDto.isImportant;
+    if (updateDto.isMyDay !== undefined) updateData.isMyDay = updateDto.isMyDay;
+    if (updateDto.listId !== undefined) updateData.listId = updateDto.listId || null;
 
     const todo = await this.prisma.todo.update({
       where: { id },
       data: updateData,
     });
 
-    return {
-      success: true,
-      data: todo,
-    };
+    return { success: true, data: todo };
   }
 
   async remove(id: string) {
-    // Verify that todo exists
     await this.findOne(id);
-
-    await this.prisma.todo.delete({
-      where: { id },
-    });
-
-    return {
-      success: true,
-      message: `Todo with ID "${id}" has been deleted successfully.`,
-    };
+    await this.prisma.todo.delete({ where: { id } });
+    return { success: true, message: `Todo deleted successfully.` };
   }
 
   async getStats() {
@@ -139,13 +136,6 @@ export class TodosService {
       this.prisma.todo.count({ where: { completed: true } }),
     ]);
 
-    return {
-      success: true,
-      data: {
-        total,
-        pending,
-        completed,
-      },
-    };
+    return { success: true, data: { total, pending, completed } };
   }
 }
