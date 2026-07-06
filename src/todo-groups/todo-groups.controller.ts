@@ -1,11 +1,19 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { TodoGroupsService } from './todo-groups.service';
 import { CreateTodoGroupDto } from './dto/create-todo-group.dto';
 import { GuestId } from '../common/decorators/guest-id.decorator';
 
 @Controller('todo-groups')
 export class TodoGroupsController {
-  constructor(private readonly todoGroupsService: TodoGroupsService) { }
+  constructor(private readonly todoGroupsService: TodoGroupsService) {}
 
   @Post()
   create(@Body() createDto: CreateTodoGroupDto, @GuestId() guestId: string) {

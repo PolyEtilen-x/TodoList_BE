@@ -8,7 +8,7 @@ async function bootstrap() {
 
   const allowedOrigins = (process.env.CORS_ORIGIN || '')
     .split(',')
-    .map(o => o.trim())
+    .map((o) => o.trim())
     .filter(Boolean);
   app.enableCors({
     origin: allowedOrigins.length ? allowedOrigins : true,

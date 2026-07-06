@@ -72,6 +72,8 @@ describe('TodosService', () => {
           listId: null,
           isImportant: false,
           isMyDay: false,
+          startTime: null,
+          endTime: null,
         },
       });
       expect(result).toEqual({ success: true, data: createdTodo });

@@ -18,7 +18,7 @@ import { GuestId } from '../common/decorators/guest-id.decorator';
 @ApiTags('todos')
 @Controller('todos')
 export class TodosController {
-  constructor(private readonly todosService: TodosService) { }
+  constructor(private readonly todosService: TodosService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new todo' })
