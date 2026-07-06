@@ -10,6 +10,7 @@ model TodoGroup {
   id        String     @id @default(uuid())
   name      String
   lists     TodoList[]
+  guestId   String?
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 }
@@ -19,6 +20,7 @@ model TodoList {
   name      String
   icon      String?    // Tên icon từ lucide-react, ví dụ: 'list', 'folder'
   isSystem  Boolean    @default(false)
+  guestId   String?
   
   groupId   String?
   group     TodoGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
@@ -37,6 +39,7 @@ model Todo {
   
   isImportant Boolean   @default(false)
   isMyDay     Boolean   @default(false)
+  guestId     String?
   
   listId      String?
   list        TodoList? @relation(fields: [listId], references: [id], onDelete: Cascade)
@@ -49,4 +52,5 @@ model Todo {
   @@index([listId])
   @@index([isImportant])
   @@index([isMyDay])
+  @@index([guestId])
 }

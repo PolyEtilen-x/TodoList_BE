@@ -8,10 +8,16 @@ export class TodoListsService implements OnModuleInit {
   constructor(private readonly prisma: PrismaService) { }
 
   async onModuleInit() {
+    // Clean up old default system lists if they exist
+    await this.prisma.todoList.deleteMany({
+      where: {
+        isSystem: true,
+        name: { in: ['My Day', 'Tasks'] },
+      },
+    });
+
     const defaultLists = [
-      { name: 'My Day', icon: 'Sun', isSystem: true },
       { name: 'Important', icon: 'Star', isSystem: true },
-      { name: 'Tasks', icon: 'Home', isSystem: true },
     ];
 
     for (const list of defaultLists) {
@@ -30,10 +36,12 @@ export class TodoListsService implements OnModuleInit {
     }
   }
 
-  async create(createDto: CreateTodoListDto) {
+  async create(createDto: CreateTodoListDto, guestId: string) {
     if (createDto.groupId) {
       const group = await this.prisma.todoGroup.findUnique({ where: { id: createDto.groupId } });
-      if (!group) throw new BadRequestException('Invalid groupId');
+      if (!group || (group.guestId && group.guestId !== guestId)) {
+        throw new BadRequestException('Invalid groupId');
+      }
     }
 
     const list = await this.prisma.todoList.create({
@@ -41,18 +49,29 @@ export class TodoListsService implements OnModuleInit {
         name: createDto.name.trim(),
         icon: createDto.icon?.trim() || null,
         groupId: createDto.groupId || null,
-        isSystem: createDto.isSystem || false,
+        isSystem: false,
+        guestId,
       },
     });
     return { success: true, data: list };
   }
 
-  async findAll() {
+  async findAll(guestId: string) {
     const lists = await this.prisma.todoList.findMany({
+      where: {
+        OR: [
+          { isSystem: true },
+          { guestId },
+        ],
+      },
       include: {
         _count: {
-          select: { todos: true }
-        }
+          select: {
+            todos: {
+              where: { guestId },
+            },
+          },
+        },
       },
       orderBy: [
         { isSystem: 'desc' },
@@ -62,21 +81,37 @@ export class TodoListsService implements OnModuleInit {
     return { success: true, data: lists };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, guestId: string) {
     const list = await this.prisma.todoList.findUnique({
       where: { id },
-      include: { todos: true },
+      include: {
+        todos: {
+          where: { guestId },
+          orderBy: { createdAt: 'desc' },
+        },
+      },
     });
+
     if (!list) throw new NotFoundException(`TodoList with ID "${id}" not found`);
+    if (!list.isSystem && list.guestId !== guestId) {
+      throw new NotFoundException(`TodoList with ID "${id}" not found`);
+    }
+
     return { success: true, data: list };
   }
 
-  async update(id: string, updateDto: UpdateTodoListDto) {
-    await this.findOne(id); // verify existence
+  async update(id: string, updateDto: UpdateTodoListDto, guestId: string) {
+    const list = (await this.findOne(id, guestId)).data;
+
+    if (list.isSystem) {
+      throw new BadRequestException('Cannot update system lists');
+    }
 
     if (updateDto.groupId) {
       const group = await this.prisma.todoGroup.findUnique({ where: { id: updateDto.groupId } });
-      if (!group) throw new BadRequestException('Invalid groupId');
+      if (!group || (group.guestId && group.guestId !== guestId)) {
+        throw new BadRequestException('Invalid groupId');
+      }
     }
 
     const updateData: Prisma.TodoListUncheckedUpdateInput = {};
@@ -84,15 +119,15 @@ export class TodoListsService implements OnModuleInit {
     if (updateDto.icon !== undefined) updateData.icon = updateDto.icon?.trim() || null;
     if (updateDto.groupId !== undefined) updateData.groupId = updateDto.groupId || null;
 
-    const list = await this.prisma.todoList.update({
+    const updatedList = await this.prisma.todoList.update({
       where: { id },
       data: updateData,
     });
-    return { success: true, data: list };
+    return { success: true, data: updatedList };
   }
 
-  async remove(id: string) {
-    const list = (await this.findOne(id)).data;
+  async remove(id: string, guestId: string) {
+    const list = (await this.findOne(id, guestId)).data;
     if (list.isSystem) {
       throw new BadRequestException('Cannot delete system lists');
     }
