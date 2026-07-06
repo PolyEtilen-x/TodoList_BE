@@ -2,7 +2,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TodosService } from './todos.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 
 describe('TodosService', () => {
   let service: TodosService;
@@ -78,6 +78,17 @@ describe('TodosService', () => {
       });
       expect(result).toEqual({ success: true, data: createdTodo });
     });
+
+    it('should throw BadRequestException if endTime is before startTime', async () => {
+      const createTodoDto = {
+        title: 'Test Todo',
+        startTime: '2026-07-06T12:00:00.000Z',
+        endTime: '2026-07-06T10:00:00.000Z',
+      };
+      await expect(service.create(createTodoDto, 'guest-1')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
   });
 
   describe('findOne', () => {
@@ -105,6 +116,20 @@ describe('TodosService', () => {
       mockPrismaService.todo.findUnique.mockResolvedValue(null);
 
       await expect(service.findOne('invalid-uuid', 'guest-1')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw NotFoundException if guest tries to view other guest todo', async () => {
+      const todo = {
+        id: 'uuid-1',
+        title: 'Test Todo',
+        completed: false,
+        guestId: 'guest-other',
+      };
+      mockPrismaService.todo.findUnique.mockResolvedValue(todo);
+
+      await expect(service.findOne('uuid-1', 'guest-1')).rejects.toThrow(
         NotFoundException,
       );
     });

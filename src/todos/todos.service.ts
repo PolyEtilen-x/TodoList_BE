@@ -7,11 +7,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateTodoDto } from './dto/create-todo.dto';
 import { UpdateTodoDto } from './dto/update-todo.dto';
 import { QueryTodoDto } from './dto/query-todo.dto';
-import { Prisma } from '@prisma/client';
+import { Prisma, Todo } from '@prisma/client';
 
 @Injectable()
 export class TodosService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(createDto: CreateTodoDto, guestId: string) {
     if (createDto.listId) {
@@ -110,7 +110,10 @@ export class TodosService {
     };
   }
 
-  async findOne(id: string, guestId: string) {
+  async findOne(
+    id: string,
+    guestId: string,
+  ): Promise<{ success: boolean; data: Todo }> {
     const todo = await this.prisma.todo.findUnique({
       where: { id },
     });
@@ -135,13 +138,19 @@ export class TodosService {
       }
     }
 
-    const start = updateDto.startTime !== undefined
-      ? (updateDto.startTime ? new Date(updateDto.startTime) : null)
-      : (existingTodo.startTime ? new Date(existingTodo.startTime) : null);
+    const start =
+      updateDto.startTime !== undefined
+        ? updateDto.startTime
+          ? new Date(updateDto.startTime)
+          : null
+        : existingTodo.startTime;
 
-    const end = updateDto.endTime !== undefined
-      ? (updateDto.endTime ? new Date(updateDto.endTime) : null)
-      : (existingTodo.endTime ? new Date(existingTodo.endTime) : null);
+    const end =
+      updateDto.endTime !== undefined
+        ? updateDto.endTime
+          ? new Date(updateDto.endTime)
+          : null
+        : existingTodo.endTime;
 
     if (start && end && end < start) {
       throw new BadRequestException('endTime must be after startTime');

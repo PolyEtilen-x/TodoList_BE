@@ -1,27 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { PrismaService } from './prisma/prisma.service';
 
 describe('AppController', () => {
   let appController: AppController;
 
-  const mockPrismaService = {
-    todoGroup: { findMany: jest.fn() },
-    todoList: { findMany: jest.fn() },
-    todo: { findMany: jest.fn() },
-  };
-
   beforeEach(async () => {
     const app: TestingModule = await Test.createTestingModule({
       controllers: [AppController],
-      providers: [
-        AppService,
-        {
-          provide: PrismaService,
-          useValue: mockPrismaService,
-        },
-      ],
+      providers: [AppService],
     }).compile();
 
     appController = app.get<AppController>(AppController);
