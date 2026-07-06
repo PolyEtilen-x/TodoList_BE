@@ -1,11 +1,34 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTodoListDto, UpdateTodoListDto } from './dto/todo-list.dto';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
-export class TodoListsService {
-  constructor(private readonly prisma: PrismaService) {}
+export class TodoListsService implements OnModuleInit {
+  constructor(private readonly prisma: PrismaService) { }
+
+  async onModuleInit() {
+    const defaultLists = [
+      { name: 'My Day', icon: 'Sun', isSystem: true },
+      { name: 'Important', icon: 'Star', isSystem: true },
+      { name: 'Tasks', icon: 'Home', isSystem: true },
+    ];
+
+    for (const list of defaultLists) {
+      const exists = await this.prisma.todoList.findFirst({
+        where: { name: list.name, isSystem: true },
+      });
+      if (!exists) {
+        await this.prisma.todoList.create({
+          data: {
+            name: list.name,
+            icon: list.icon,
+            isSystem: true,
+          },
+        });
+      }
+    }
+  }
 
   async create(createDto: CreateTodoListDto) {
     if (createDto.groupId) {
@@ -14,7 +37,7 @@ export class TodoListsService {
     }
 
     const list = await this.prisma.todoList.create({
-      data: { 
+      data: {
         name: createDto.name.trim(),
         icon: createDto.icon?.trim() || null,
         groupId: createDto.groupId || null,
@@ -26,7 +49,7 @@ export class TodoListsService {
 
   async findAll() {
     const lists = await this.prisma.todoList.findMany({
-      include: { 
+      include: {
         _count: {
           select: { todos: true }
         }
@@ -73,7 +96,7 @@ export class TodoListsService {
     if (list.isSystem) {
       throw new BadRequestException('Cannot delete system lists');
     }
-    
+
     await this.prisma.todoList.delete({ where: { id } });
     return { success: true, message: 'List deleted successfully' };
   }
