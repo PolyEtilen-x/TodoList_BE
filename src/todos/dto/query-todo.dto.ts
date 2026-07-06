@@ -1,40 +1,37 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsOptional, IsString, IsIn } from 'class-validator';
 
 export class QueryTodoDto {
-  @ApiPropertyOptional({ description: 'Search query to search in title and description' })
-  @IsString()
   @IsOptional()
+  @IsString()
   search?: string;
 
-  @ApiPropertyOptional({ description: 'Filter by todo status', enum: ['all', 'pending', 'completed'] })
-  @IsIn(['all', 'pending', 'completed'])
   @IsOptional()
-  status?: 'all' | 'pending' | 'completed' = 'all';
+  @IsIn(['all', 'completed', 'pending'])
+  status?: 'all' | 'completed' | 'pending';
 
-  @ApiPropertyOptional({ description: 'Sort by field', enum: ['createdAt', 'updatedAt', 'title'] })
-  @IsIn(['createdAt', 'updatedAt', 'title'])
   @IsOptional()
-  sortBy?: 'createdAt' | 'updatedAt' | 'title' = 'createdAt';
+  @IsString()
+  sortBy?: string;
 
-  @ApiPropertyOptional({ description: 'Sort direction', enum: ['asc', 'desc'] })
+  @IsOptional()
   @IsIn(['asc', 'desc'])
-  @IsOptional()
-  order?: 'asc' | 'desc' = 'desc';
+  order?: 'asc' | 'desc';
 
-  @ApiPropertyOptional({ description: 'Page number', default: 1 })
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
   @IsOptional()
-  page?: number = 1;
+  page?: number;
 
-  @ApiPropertyOptional({ description: 'Number of items per page', default: 10 })
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(100)
   @IsOptional()
-  limit?: number = 10;
+  limit?: number;
+
+  @IsOptional()
+  @IsString()
+  listId?: string;
+
+  @IsOptional()
+  @IsString()
+  isImportant?: string; // 'true' or 'false'
+
+  @IsOptional()
+  @IsString()
+  isMyDay?: string; // 'true' or 'false'
 }

@@ -6,14 +6,47 @@ datasource db {
   provider = "postgresql"
 }
 
+model TodoGroup {
+  id        String     @id @default(uuid())
+  name      String
+  lists     TodoList[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model TodoList {
+  id        String     @id @default(uuid())
+  name      String
+  icon      String?    // Tên icon từ lucide-react, ví dụ: 'list', 'folder'
+  isSystem  Boolean    @default(false)
+  
+  groupId   String?
+  group     TodoGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  
+  todos     Todo[]
+  
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
 model Todo {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   title       String
   description String?
-  completed   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  completed   Boolean   @default(false)
+  
+  isImportant Boolean   @default(false)
+  isMyDay     Boolean   @default(false)
+  
+  listId      String?
+  list        TodoList? @relation(fields: [listId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([completed])
   @@index([createdAt])
+  @@index([listId])
+  @@index([isImportant])
+  @@index([isMyDay])
 }
