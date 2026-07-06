@@ -1,6 +1,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { AppService } from './app.service';
 import { PrismaService } from './prisma/prisma.service';
+import { GuestId } from './common/decorators/guest-id.decorator';
 
 @Controller()
 export class AppController {
@@ -15,7 +16,7 @@ export class AppController {
   }
 
   @Get('search')
-  async globalSearch(@Query('q') query: string) {
+  async globalSearch(@Query('q') query: string, @GuestId() guestId: string) {
     if (!query || query.trim() === '') {
       return { success: true, data: { groups: [], lists: [], todos: [] } };
     }
@@ -24,15 +25,22 @@ export class AppController {
 
     const [groups, lists, todos] = await Promise.all([
       this.prisma.todoGroup.findMany({
-        where: { name: { contains: pattern, mode: 'insensitive' } },
+        where: {
+          guestId,
+          name: { contains: pattern, mode: 'insensitive' },
+        },
         take: 5,
       }),
       this.prisma.todoList.findMany({
-        where: { name: { contains: pattern, mode: 'insensitive' } },
+        where: {
+          guestId,
+          name: { contains: pattern, mode: 'insensitive' },
+        },
         take: 10,
       }),
       this.prisma.todo.findMany({
         where: {
+          guestId,
           OR: [
             { title: { contains: pattern, mode: 'insensitive' } },
             { description: { contains: pattern, mode: 'insensitive' } },

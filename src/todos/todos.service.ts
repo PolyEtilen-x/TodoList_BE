@@ -7,28 +7,32 @@ import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class TodosService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
-  async create(createDto: CreateTodoDto) {
+  async create(createDto: CreateTodoDto, guestId: string) {
     if (createDto.listId) {
       const list = await this.prisma.todoList.findUnique({ where: { id: createDto.listId } });
       if (!list) throw new BadRequestException('Invalid listId');
+      if (!list.isSystem && list.guestId !== guestId) {
+        throw new BadRequestException('Invalid listId');
+      }
     }
 
     const todo = await this.prisma.todo.create({
       data: {
         title: createDto.title.trim(),
-        description: createDto.description?.trim(),
+        description: createDto.description?.trim() || null,
         isImportant: createDto.isImportant || false,
         isMyDay: createDto.isMyDay || false,
         listId: createDto.listId || null,
+        guestId,
       },
     });
 
     return { success: true, data: todo };
   }
 
-  async findAll(query: QueryTodoDto) {
+  async findAll(query: QueryTodoDto, guestId: string) {
     const {
       search,
       status,
@@ -41,7 +45,7 @@ export class TodosService {
       isMyDay
     } = query;
 
-    const where: Prisma.TodoWhereInput = {};
+    const where: Prisma.TodoWhereInput = { guestId };
 
     if (search && search.trim() !== '') {
       const searchPattern = search.trim();
@@ -90,26 +94,31 @@ export class TodosService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, guestId: string) {
     const todo = await this.prisma.todo.findUnique({
       where: { id },
     });
 
-    if (!todo) throw new NotFoundException(`Todo with ID "${id}" not found`);
+    if (!todo || todo.guestId !== guestId) {
+      throw new NotFoundException(`Todo with ID "${id}" not found`);
+    }
     return { success: true, data: todo };
   }
 
-  async update(id: string, updateDto: UpdateTodoDto) {
-    await this.findOne(id); // verify
+  async update(id: string, updateDto: UpdateTodoDto, guestId: string) {
+    await this.findOne(id, guestId); // verify ownership and existence
 
     if (updateDto.listId) {
       const list = await this.prisma.todoList.findUnique({ where: { id: updateDto.listId } });
       if (!list) throw new BadRequestException('Invalid listId');
+      if (!list.isSystem && list.guestId !== guestId) {
+        throw new BadRequestException('Invalid listId');
+      }
     }
 
     const updateData: Prisma.TodoUncheckedUpdateInput = {};
     if (updateDto.title !== undefined) updateData.title = updateDto.title.trim();
-    if (updateDto.description !== undefined) updateData.description = updateDto.description?.trim();
+    if (updateDto.description !== undefined) updateData.description = updateDto.description?.trim() || null;
     if (updateDto.completed !== undefined) updateData.completed = updateDto.completed;
     if (updateDto.isImportant !== undefined) updateData.isImportant = updateDto.isImportant;
     if (updateDto.isMyDay !== undefined) updateData.isMyDay = updateDto.isMyDay;
@@ -123,17 +132,17 @@ export class TodosService {
     return { success: true, data: todo };
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(id: string, guestId: string) {
+    await this.findOne(id, guestId); // verify ownership
     await this.prisma.todo.delete({ where: { id } });
     return { success: true, message: `Todo deleted successfully.` };
   }
 
-  async getStats() {
+  async getStats(guestId: string) {
     const [total, pending, completed] = await Promise.all([
-      this.prisma.todo.count(),
-      this.prisma.todo.count({ where: { completed: false } }),
-      this.prisma.todo.count({ where: { completed: true } }),
+      this.prisma.todo.count({ where: { guestId } }),
+      this.prisma.todo.count({ where: { guestId, completed: false } }),
+      this.prisma.todo.count({ where: { guestId, completed: true } }),
     ]);
 
     return { success: true, data: { total, pending, completed } };

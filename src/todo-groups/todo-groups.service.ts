@@ -6,32 +6,64 @@ import { CreateTodoGroupDto } from './dto/create-todo-group.dto';
 export class TodoGroupsService {
   constructor(private readonly prisma: PrismaService) { }
 
-  async create(createDto: CreateTodoGroupDto) {
+  async create(createDto: CreateTodoGroupDto, guestId: string) {
     const group = await this.prisma.todoGroup.create({
-      data: { name: createDto.name.trim() },
+      data: {
+        name: createDto.name.trim(),
+        guestId,
+      },
     });
     return { success: true, data: group };
   }
 
-  async findAll() {
+  async findAll(guestId: string) {
     const groups = await this.prisma.todoGroup.findMany({
-      include: { lists: true },
+      where: { guestId },
+      include: {
+        lists: {
+          where: { guestId },
+          include: {
+            _count: {
+              select: {
+                todos: {
+                  where: { guestId },
+                },
+              },
+            },
+          },
+        },
+      },
       orderBy: { createdAt: 'asc' },
     });
     return { success: true, data: groups };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, guestId: string) {
     const group = await this.prisma.todoGroup.findUnique({
       where: { id },
-      include: { lists: true },
+      include: {
+        lists: {
+          where: { guestId },
+          include: {
+            _count: {
+              select: {
+                todos: {
+                  where: { guestId },
+                },
+              },
+            },
+          },
+        },
+      },
     });
-    if (!group) throw new NotFoundException(`TodoGroup with ID "${id}" not found`);
+    if (!group || group.guestId !== guestId) {
+      throw new NotFoundException(`TodoGroup with ID "${id}" not found`);
+    }
     return { success: true, data: group };
   }
 
-  async update(id: string, updateDto: CreateTodoGroupDto) {
-    await this.findOne(id);
+  async update(id: string, updateDto: CreateTodoGroupDto, guestId: string) {
+    await this.findOne(id, guestId);
     const group = await this.prisma.todoGroup.update({
       where: { id },
       data: { name: updateDto.name.trim() },
@@ -39,8 +71,8 @@ export class TodoGroupsService {
     return { success: true, data: group };
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(id: string, guestId: string) {
+    await this.findOne(id, guestId);
     await this.prisma.todoGroup.delete({ where: { id } });
     return { success: true, message: 'Group deleted successfully' };
   }
